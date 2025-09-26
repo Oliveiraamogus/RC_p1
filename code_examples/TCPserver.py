@@ -5,9 +5,12 @@
 """
 from socket import *
 import random
+import sys
 
-serverPort = 12000
-sockBuffer = 2048 * 2
+serverPort = int(sys.argv[1])
+sockBuffer = 1024
+
+fileName = "server"
 
 def main():
 
@@ -19,28 +22,19 @@ def main():
 
     while True:
         serverNumber = random.randint(1,100)
-        
+
         connSocket, addr = serverSocket.accept()    # waits for incoming requests:
                                                     # new socket created on return
         print("Connected by: ", str(addr))
 
-        sentence = connSocket.recv(sockBuffer).decode()     # read a sentence of bytes
-                                                            # received from client
 
-        val = connSocket.recv(sockBuffer)     # read a value
-                                                         # received from client
-        val = int.from_bytes(val, 'big')
-        result = val + serverNumber
-
-        print("Data from connected user: ", sentence)       # display received sentence
-        print("User Number: ", val)
-        print("Server number: ", serverNumber)
-        print("Result: ", result)
-
-
-
-        connSocket.send(result.to_bytes(2, 'big'))             # send modified sentence over
-                                                            # TCP connection
+        with open(sys.argv[2], 'wb') as f:
+          while True:
+              chunk = connSocket.recv(sockBuffer) 
+              f.write(chunk)  
+              if not chunk:
+                  break
+        f.close()
 
         connSocket.close()      # close TCP connection:
                                 # the welcoming socket continues

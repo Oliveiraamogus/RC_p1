@@ -4,35 +4,60 @@
 @author: cpm
 """
 from socket import *
+from Packet import Packet, RRQ, DAT, ACK, ERR
+import sys
 
-serverName = "172.17.0.2"            # server name
-serverPort = 12000                  # socket server port number
-sockBuffer = 2048 * 2                  # socket buffer size
+serverName = sys.argv[1]            # server name
+serverPort = int(sys.argv[2])                  # socket server port number
+sockBuffer = 512                   # socket buffer size
 
 def main():
-
-
-
+  try:
     clientSocket = socket(AF_INET,SOCK_STREAM)       # create TCP socket
     clientSocket.connect((serverName, serverPort))   # open TCP connection
+  except ConnectionRefusedError:
+    print("Connection Refused")
+    sys.exit()
 
-    sentence = input ("Enter Name: ")
-    val = int(input("Enter Number: "))
-   # take input
+  print("Connect to server")
+  print(clientSocket.recv(sockBuffer)) 
 
-    clientSocket.send(sentence.encode())             # send user's sentence
-                                                     # over TCP connection
-    clientSocket.send(val.to_bytes(2, 'big'))             # send user's value
-                                                     # over TCP connection
+  sentence = [""]
+  while (sentence[0] != "end") :
+    try:
+      sentence = (input ("Command: ")).split()
+      match sentence[0]:
+        case "dir":
+          clientSocket.send(RRQ(1, ""))
+          while True:
+              chunk = clientSocket.recv(sockBuffer)
+              print(chunk.getData().decode())
+              clientSocket.send(ACK(4, chunk.getBlock()))
+              if chunk.getBlock() == null:
+                  break
+        case "get":
+          sentence.pop(0) #remover o "get"
+          clientSocket.send(RRQ(1, sentence))
+          for file in sentence:
+            with open(file, 'wb') as f:
+              while True:
+                chunk = clientSocket.recv(sockBuffer) 
+                f.write(chunk.getData())  
+                clientSocket.send(ACK(4, chunk.getBlock()))
+                if chunk.getBlock() == null:
+                  break
+            f.close()
+        case "end":
+          print("Connection close, client ended")
+        case _:
+          print("Unknown command")
 
+      # take input
+    except KeyboardInterrupt:
+        print("Exiting!")
+        break
+    print("client done")
 
-
-    val = clientSocket.recv(sockBuffer)     # read a value
-                                                        # received from client
-    val = int.from_bytes(val, 'big')
-    
-    print("Message received: ", val)
-    
     clientSocket.close()            # close TCP connection
 
 main()
