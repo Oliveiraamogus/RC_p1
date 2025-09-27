@@ -28,26 +28,26 @@ def main():
       sentence = (input ("Command: ")).split()
       match sentence[0]:
         case "dir":
-          clientSocket.send(RRQ(1, ""))
+          clientSocket.send(RRQ(""))
           while True:
               chunk = clientSocket.recv(sockBuffer)
               print(chunk.getData().decode())
-              clientSocket.send(ACK(4, chunk.getBlock()))
+              clientSocket.send(ACK(chunk.getBlock()))
               if chunk.getBlock() == null:
                   break
         case "get":
           sentence.pop(0) #remover o "get"
-          clientSocket.send(RRQ(1, sentence))
+          clientSocket.send(RRQ(sentence))
           for file in sentence:
             with open(file, 'wb') as f:
               while True:
                 chunk = clientSocket.recv(sockBuffer) 
                 f.write(chunk.getData())  
-                clientSocket.send(ACK(4, chunk.getBlock()))
+                clientSocket.send(ACK( chunk.getBlock()))
                 if chunk.getBlock() == null:
                   break
             f.close()
-        case "end":
+        case "end":#aqui não devias fazer lg socket.colse()??
           print("Connection close, client ended")
         case _:
           print("Unknown command")
