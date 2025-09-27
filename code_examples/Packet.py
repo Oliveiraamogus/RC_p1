@@ -7,17 +7,16 @@ class Packet:
 
 
 class RRQ(Packet):
-    def __init__(self, opcode, filename):
-        super().__init__(opcode)
+    def __init__(self, filename):
+        super().__init__(1)
         self.filename = filename
-        self.size = 
 
     def getFIlename(self):
         return self.filename
 
 class DAT(Packet):
-    def __init__(self, opcode, block, size, data):
-        super().__init__(opcode)
+    def __init__(self,  block, size, data):
+        super().__init__(3)
         self.block = block
         self.size = size
         self.data = data
@@ -31,8 +30,8 @@ class DAT(Packet):
 
 
 class ACK(Packet):
-    def __init__(self, opcode, block):
-        super().__init__(opcode)
+    def __init__(self, block):
+        super().__init__(4)
         self.block = block
 
     def getBlock(self):
@@ -40,8 +39,8 @@ class ACK(Packet):
 
 
 class ERR(Packet):
-    def __init__(self, opcode, error):
-        super().__init__(opcode)
+    def __init__(self, error):
+        super().__init__(5)
         self.error = error
 
     def printError(self):

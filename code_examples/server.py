@@ -12,7 +12,7 @@ dir_path = "."
 def workOnClient(socket, addr):
   #é suposto mandar sempre um packect com welcome 
   welMsg = "Welcome to " + str(addr) + " file server"
-  welcomePacket = DAT(3, 1, welMsg.len(), welMsg) 
+  welcomePacket = DAT(1, welMsg.len(), welMsg) 
   socket.send(welcomePacket.dumps())
   #acho que temos de receber um ACK do client e só depois é comecamos a fazer packest de comandos
   while True:
