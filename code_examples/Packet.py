@@ -11,7 +11,7 @@ class RRQ(Packet):
         super().__init__(1)
         self.filename = filename
 
-    def getFIlename(self):
+    def getFilename(self):
         return self.filename
 
 class DAT(Packet):

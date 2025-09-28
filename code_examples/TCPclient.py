@@ -6,10 +6,41 @@
 from socket import *
 from Packet import *
 import sys
+import pickle
 
 serverName = sys.argv[1]            # server name
 serverPort = int(sys.argv[2])                  # socket server port number
 sockBuffer = 512                   # socket buffer size
+
+
+def dir(clientSocket):
+  clientSocket.send(pickle.dumps(RRQ("")))
+  while True:
+      chunk = pickle.loads(clientSocket.recv(sockBuffer))
+      print(chunk.getData())
+
+      #eu tenho quase a certeza q e preciso o decode, a data vai ser array de bytes, e o dir é pa listar no
+      # standard output o nome, como string, por isso pa passar o array de bytes pa string .decode()
+      clientSocket.send(pickle.dumps(ACK(chunk.getBlock())))
+      if chunk.getSize() == 0:#acho que é suposto veres se está vazio a data do chunk
+          #porque o ultimo que mando é um dat vazio (eles pediram no enunciado)
+          break
+
+
+
+def get(clientSocket, filename):
+  clientSocket.send(pickle.dumps(RRQ(filename)))
+  with open(filename, 'wb') as f:
+    while True:
+      chunk = clientSocket.recv(sockBuffer)
+      f.write(chunk)
+      clientSocket.send(pickle.dumps(ACK(chunk.getBlock())))
+      print("Writing...!")
+      if chunk.getSize() == 0:
+        break
+  f.close()
+
+
 
 def main():
   try:
@@ -20,37 +51,19 @@ def main():
     sys.exit()
 
   print("Connect to server")
-  print(clientSocket.recv(sockBuffer)) 
-  #acho que falta mandar um pacote ack
+  print((pickle.loads((clientSocket.recv(sockBuffer))).getData())) 
+  clientSocket.send(pickle.dumps(ACK(1)))
   sentence = [""]
   while (sentence[0] != "end") :
     try:
       sentence = (input ("Command: ")).split()
       match sentence[0]:
         case "dir":
-          clientSocket.send(RRQ(""))
-          while True:
-              chunk = clientSocket.recv(sockBuffer)
-              print(chunk.getData().decode())#acho que não precisas de usar o decode encode apenas o loads() e dumps()
-              #decode encode acho que é só para strings como o nosso chunk vai ser um objeto usas a 
-              # sereialização do pickle que transforma o objeto em bytes pelo menos foi o que percebi
-              clientSocket.send(ACK(chunk.getBlock()))
-              if chunk.getBlock() == null:#acho que é suposto veres se está vazio a data do chunk
-                  #porque o ultimo que mando é um dat vazio (eles pediram no enunciado)
-                  break
+          dir(clientSocket)
         case "get":
-          sentence.pop(0) #remover o "get"
-          clientSocket.send(RRQ(sentence))
-          for file in sentence:
-            with open(file, 'wb') as f:
-              while True:
-                chunk = clientSocket.recv(sockBuffer) 
-                f.write(chunk.getData())  
-                clientSocket.send(ACK( chunk.getBlock()))
-                if chunk.getBlock() == null:
-                  break
-            f.close()
-        case "end":#aqui não devias fazer lg socket.colse()??
+          get(clientSocket, sentence[1])
+        case "end":
+          clientSocket.close()            # close TCP connection
           print("Connection close, client ended")
         case _:
           print("Unknown command")
@@ -59,8 +72,6 @@ def main():
     except KeyboardInterrupt:
         print("Exiting!")
         break
-    print("client done")
 
-    clientSocket.close()            # close TCP connection
 
 main()
