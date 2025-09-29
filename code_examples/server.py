@@ -5,99 +5,97 @@ import sys
 import pickle
 from socket import *
 from Packet import *
-from pickle import *
 
-socketBuffer = 1024
-dir_path = "." 
+socketBuffer = 1024   # socket buffer size
+blockSize = 512       # block size
+dir_path = "."        # current path 
 
 class ClientProtocolError(Exception):
   pass
 
 def workOnClient(socket, addr):
-  #é suposto mandar sempre um packect com welcome 
+  # send welcoming packet with server identification 
   welMsg = "Welcome to " + str(addr) + " file server"
   welcomePacket = DAT(1, len(welMsg), welMsg) 
   socket.send(pickle.dumps(welcomePacket))
-  #acho que temos de receber um ACK do client e só depois é comecamos a fazer packets de comandos
+  # receving client's ACK packet
   pickle.loads(socket.recv(socketBuffer))
   while True:
     try:
-    #vamos receber um packet  
-      #packet = Packet  
-      # é possivel que o codigo embaixo não vá reconher que vamos fazer loads a uma packet 
+      # receving client's RRQ packets for command GET or DIR
       packet = pickle.loads(socket.recv(socketBuffer))
-      #ver se tenho de fazer um isinstance() de packet para poder usar o metodo getcode
-      opcode = packet.getCode()
+      # checking if it´s a RRQ packet
+      if not isinstance(packet, RRQ):
+        raise ClientProtocolError
       
-      match opcode:
-        case 1: #RRQ packet
-          if packet.getFilename() != "": #comando GET
-            # se o file não existir tenho de mandar um packet de erro e fechar a cena 
-            # reclamar se for enviado uma packet que não é ack
+      if packet.getFilename() != "": # GET command
             try:
-              
+              # openning the file
               with open(packet.getFilename(), 'r') as f:
-                fsize = os.path.getsize(packet.getFilename())
-                blockN = (fsize // 512) + 1
+                fsize = os.path.getsize(packet.getFilename()) # get file size
+                blockN = (fsize // blockSize) + 1 # calculating how many blocks we'll need for a file with fsize
                 for i in range(int(blockN)):
-                  data = f.read(512)
+                  data = f.read(blockSize)
                   datP = DAT(i + 1, len(data), data)
-                  socket.send(pickle.dumps(datP))
-                  ackP = pickle.loads(socket.recv(socketBuffer))
-                  ##falta reclamar se ele mandar um packet que não é ack
-                  #se o i não for igual ao bloco do packet recebebido devo dar erro ou fechar alguma coisa
-                  if not isinstance(ackP, ACK) and i + 1 != ackP.getBlock():
+                  socket.send(pickle.dumps(datP)) # sending the DAT packet
+                  ackP = pickle.loads(socket.recv(socketBuffer)) # receving the ACK packet
+                  # checking for a macth in block numbers and protocol errors
+                  if not isinstance(ackP, ACK) or i + 1 != ackP.getBlock():
                     raise ClientProtocolError
                       
             except FileNotFoundError:
               errP = ERR("File not found")
-              socket.send(pickle.dumps(errP))
+              socket.send(pickle.dumps(errP)) # sending ERR packet
             except ClientProtocolError:
               print("Protocol error,Connection closed")
-              socket.close()
+              socket.close() # close TCP connection
 
 
-          else : #comando DIR
-          #MUDAR ERSTA MERDA PARA TRY EXCEPT 
-            i = 1
-            for path in os.listdir(dir_path):
-                # check if current path is a file
-                if os.path.isfile(os.path.join(dir_path, path)):
-                    p = DAT(i, len(path),path)
-                    socket.send(pickle.dumps(p))
-                    ackP = pickle.loads(socket.recv(socketBuffer))
-                    if isinstance(ackP, ACK) and i == ackP.getBlock():
-                      i = ackP.getBlock() + 1
-                    else :
-                      socket.close()
+      else : # DIR command
+      
+        try:
+          i = 1
+          for path in os.listdir(dir_path):
+              if os.path.isfile(os.path.join(dir_path, path)): # check if current path is a file
+                  p = DAT(i, len(path),path)
+                  socket.send(pickle.dumps(p)) # sending the DAT packet
+                  ackP = pickle.loads(socket.recv(socketBuffer)) # receving the ACK packet
+                  # checking for a macth in block numbers and protocol errors
+                  if isinstance(ackP, ACK) and i == ackP.getBlock():
+                    i = ackP.getBlock() + 1
+                  else :
+                    raise ClientProtocolError
             
-            # mandar o packect vazio para saber que terminou a comunicação
-            p = DAT(i, 0, "")
-            socket.send(pickle.dumps(p))
+          p = DAT(i, 0, "")
+          socket.send(pickle.dumps(p)) #send empty DAT packet to signal that all information has been transmitted
+        except ClientProtocolError:
+          print("Protocol error,Connection closed")
+          socket.close()# close TCP connection
         
-    except EOFError:
+    except EOFError: #####Para quê esta drena?????
       break
-  socket.close()
+    except ClientProtocolError:
+            print("Protocol error,Connection closed")
+            socket.close() # close TCP connection
+  socket.close() # close TCP connection
 
 
 def main():
-  server_port = int(sys.argv[1]) 
+  server_port = int(sys.argv[1]) # socket server port number
 
   try:
-    serverSocket = socket(AF_INET,SOCK_STREAM)   # create TCP welcoming socket
+    serverSocket = socket(AF_INET,SOCK_STREAM) # create TCP welcoming socket
     serverSocket.bind(("", server_port))
   except ConnectionRefusedError:
     print("Unable to start server")
     sys.exit()
 
-  serverSocket.listen() 
-  #ligado e tal gostava de saber se retorna alguma coisa pq se falhar falta uma msg
+  serverSocket.listen() # begin listening for incoming TCP requests
   print("Server is running")
   
-  while (True):
-    newSocket, addr = serverSocket.accept()
-    #abrir a thread
-    tid = threading.Thread(target= workOnClient, args= (newSocket, addr))
+  while True:
+    newSocket, addr = serverSocket.accept() # waits for incoming requests and new socket is created on return
+    tid = threading.Thread(target= workOnClient, args= (newSocket, addr)) # creating a thread to handle client
     tid.start()
 
 main()
