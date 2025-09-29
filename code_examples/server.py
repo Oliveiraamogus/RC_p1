@@ -19,8 +19,6 @@ DAT = 3
 ACK = 4
 ERR = 5
 
-
-
 class ClientProtocolError(Exception):
   pass
 
@@ -68,7 +66,7 @@ def workOnClient(socket, addr):
           i = 1
           for path in os.listdir(dir_path):
               if os.path.isfile(os.path.join(dir_path, path)) and not path.startswith("."): # checks if current path is a file and if it'
-                  p = (DAT, i, len(path),path)#DAT(i, len(path),path)
+                  p = (DAT, i, len(path),path)
                   socket.send(pickle.dumps(p)) # sending the DAT packet
                   ackP = pickle.loads(socket.recv(socketBuffer)) # receiving the ACK packet
                   # checking for a macth in block numbers and protocol errors

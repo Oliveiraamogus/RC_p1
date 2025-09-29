@@ -10,7 +10,7 @@ import pickle
 serverName = sys.argv[1]            # server name
 serverPort = int(sys.argv[2])       # socket server port number
 sockBuffer = 1024                   # socket buffer size
-blockSize = 512       # block size
+blockSize = 512                     # block size
 
 RRQ = 1
 DAT = 3
@@ -26,7 +26,7 @@ def dir(clientSocket): # DIR command
   while True:
     try:
       chunk = pickle.loads(clientSocket.recv(sockBuffer)) # receiving DAT packetif chunk[0] == ERR:
-      if chunk[1] != expected_block_number :
+      if chunk[1] != expected_block_number :  # checks if the blocks are being received in the right order
         raise ClientProtocolError
       else :
         expected_block_number += 1
@@ -49,13 +49,13 @@ def get(clientSocket, filenames): # GET command
       while True:
         try:
           chunk = pickle.loads(clientSocket.recv(sockBuffer)) # receiving DAT packet
-          if chunk[0] == ERR:
-            os.remove(filenames[2])
+          if chunk[0] == ERR  : # checks if the packet received is of type ERR
+            os.remove(filenames[2]) # deletes the file when the server does not find the remote file or there is an error on its part
             print("File not found")
             break
           f.write(chunk[3]) # writing on the local file
           clientSocket.send(pickle.dumps((ACK, chunk[1]))) # sending ACK packet
-          if chunk[1] != expected_block_number :
+          if chunk[1] != expected_block_number :  # checks if the blocks are being received in the right order
             raise ClientProtocolError
           else :
             expected_block_number += 1
@@ -83,7 +83,6 @@ def main():
   print((pickle.loads(clientSocket.recv(sockBuffer)))[3]) # receiving server's welcoming DAT packet
   clientSocket.send(pickle.dumps((ACK, 1))) # sending ACK packet
   sentence = [""]
-  #### acaba de commentar esta parte pls
   while (sentence[0] != "end") :
     try:
       sentence = (input ("Command: ")).split()
