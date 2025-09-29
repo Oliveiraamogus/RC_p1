@@ -1,3 +1,7 @@
+"""
+@author: Beatriz Ramos (68030)
+@author: Manuel Oliveira ()
+"""
 
 import os
 import threading
@@ -18,11 +22,11 @@ def workOnClient(socket, addr):
   welMsg = "Welcome to " + str(addr) + " file server"
   welcomePacket = DAT(1, len(welMsg), welMsg) 
   socket.send(pickle.dumps(welcomePacket))
-  # receving client's ACK packet
+  # receiving client's ACK packet
   pickle.loads(socket.recv(socketBuffer))
   while True:
     try:
-      # receving client's RRQ packets for command GET or DIR
+      # receiving client's RRQ packets for command GET or DIR
       packet = pickle.loads(socket.recv(socketBuffer))
       # checking if it´s a RRQ packet
       if not isinstance(packet, RRQ):
@@ -38,7 +42,7 @@ def workOnClient(socket, addr):
                   data = f.read(blockSize)
                   datP = DAT(i + 1, len(data), data)
                   socket.send(pickle.dumps(datP)) # sending the DAT packet
-                  ackP = pickle.loads(socket.recv(socketBuffer)) # receving the ACK packet
+                  ackP = pickle.loads(socket.recv(socketBuffer)) # receiving the ACK packet
                   # checking for a macth in block numbers and protocol errors
                   if not isinstance(ackP, ACK) or i + 1 != ackP.getBlock():
                     raise ClientProtocolError
@@ -59,7 +63,7 @@ def workOnClient(socket, addr):
               if os.path.isfile(os.path.join(dir_path, path)): # check if current path is a file
                   p = DAT(i, len(path),path)
                   socket.send(pickle.dumps(p)) # sending the DAT packet
-                  ackP = pickle.loads(socket.recv(socketBuffer)) # receving the ACK packet
+                  ackP = pickle.loads(socket.recv(socketBuffer)) # receiving the ACK packet
                   # checking for a macth in block numbers and protocol errors
                   if isinstance(ackP, ACK) and i == ackP.getBlock():
                     i = ackP.getBlock() + 1
