@@ -20,7 +20,7 @@ class ClientProtocolError(Exception):
 def workOnClient(socket, addr):
   # send welcoming packet with server identification 
   welMsg = "Welcome to " + str(addr) + " file server"
-  welcomePacket = DAT(1, len(welMsg), welMsg) 
+  welcomePacket = (3, 1, len(welMsg), welMsg) #DAT(1, len(welMsg), welMsg) 
   socket.send(pickle.dumps(welcomePacket))
   # receiving client's ACK packet
   pickle.loads(socket.recv(socketBuffer))
@@ -29,7 +29,8 @@ def workOnClient(socket, addr):
       # receiving client's RRQ packets for command GET or DIR
       packet = pickle.loads(socket.recv(socketBuffer))
       # checking if it´s a RRQ packet
-      if not isinstance(packet, RRQ):
+      #if not isinstance(packet, RRQ):
+      if packet[0] != 1:
         raise ClientProtocolError
       
       if packet.getFilename() != "": # GET command
@@ -40,15 +41,15 @@ def workOnClient(socket, addr):
                 blockN = (fsize // blockSize) + 1 # calculating how many blocks we'll need for a file with fsize
                 for i in range(int(blockN)):
                   data = f.read(blockSize)
-                  datP = DAT(i + 1, len(data), data)
+                  datP = (3, i + 1, len(data), data)#DAT(i + 1, len(data), data)
                   socket.send(pickle.dumps(datP)) # sending the DAT packet
                   ackP = pickle.loads(socket.recv(socketBuffer)) # receiving the ACK packet
                   # checking for a macth in block numbers and protocol errors
-                  if not isinstance(ackP, ACK) or i + 1 != ackP.getBlock():
+                  if ackP[0] != 4 or i + 1 != ackP[1]:
                     raise ClientProtocolError
                       
             except FileNotFoundError:
-              errP = ERR("File not found")
+              errP = (5,"File not found")#ERR("File not found")
               socket.send(pickle.dumps(errP)) # sending ERR packet
             except ClientProtocolError:
               print("Protocol error,Connection closed")
@@ -61,16 +62,16 @@ def workOnClient(socket, addr):
           i = 1
           for path in os.listdir(dir_path):
               if os.path.isfile(os.path.join(dir_path, path)): # check if current path is a file
-                  p = DAT(i, len(path),path)
+                  p = (3, 1, len(path),path)#DAT(i, len(path),path)
                   socket.send(pickle.dumps(p)) # sending the DAT packet
                   ackP = pickle.loads(socket.recv(socketBuffer)) # receiving the ACK packet
                   # checking for a macth in block numbers and protocol errors
-                  if isinstance(ackP, ACK) and i == ackP.getBlock():
-                    i = ackP.getBlock() + 1
+                  if ackP[0] == 3 and i == ackP[1]:
+                    i = ackP[1] + 1
                   else :
                     raise ClientProtocolError
             
-          p = DAT(i, 0, "")
+          p = (3,i, 0, "")#DAT(i, 0, "")
           socket.send(pickle.dumps(p)) #send empty DAT packet to signal that all information has been transmitted
         except ClientProtocolError:
           print("Protocol error,Connection closed")
