@@ -7,7 +7,7 @@ from socket import *
 from Packet import *
 from pickle import *
 
-socketBuffer = 512
+socketBuffer = 1024
 dir_path = "." 
 
 class ClientProtocolError(Exception):
@@ -36,19 +36,11 @@ def workOnClient(socket, addr):
             # reclamar se for enviado uma packet que não é ack
             try:
               
-              with open(packet.getFilename(), 'rb') as f:
+              with open(packet.getFilename(), 'r') as f:
                 fsize = os.path.getsize(packet.getFilename())
-                drenas = fsize % socketBuffer
-                blockN = 0
-                if drenas == 0 :
-                  blockN = fsize / socketBuffer
-                else : 
-                  blockN = (fsize // socketBuffer) + 1
-                print(fsize // socketBuffer)
-                print(fsize)
+                blockN = (fsize // 512) + 1
                 for i in range(int(blockN)):
-                  print("Reading...!")
-                  data = f.read(socketBuffer)
+                  data = f.read(512)
                   datP = DAT(i + 1, len(data), data)
                   socket.send(pickle.dumps(datP))
                   ackP = pickle.loads(socket.recv(socketBuffer))
@@ -74,8 +66,6 @@ def workOnClient(socket, addr):
                     p = DAT(i, len(path),path)
                     socket.send(pickle.dumps(p))
                     ackP = pickle.loads(socket.recv(socketBuffer))
-                    ##falta reclamar se ele mandar um packet que não é ack
-                    #se o i não for igual ao bloco do packet recebebido devo dar erro ou fechar alguma coisa
                     if isinstance(ackP, ACK) and i == ackP.getBlock():
                       i = ackP.getBlock() + 1
                     else :

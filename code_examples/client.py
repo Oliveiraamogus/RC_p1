@@ -10,7 +10,7 @@ import pickle
 
 serverName = sys.argv[1]            # server name
 serverPort = int(sys.argv[2])                  # socket server port number
-sockBuffer = 512                   # socket buffer size
+sockBuffer = 1024              # socket buffer size
 
 
 def dir(clientSocket):
@@ -28,15 +28,14 @@ def dir(clientSocket):
 
 
 
-def get(clientSocket, filename):
-  clientSocket.send(pickle.dumps(RRQ(filename)))
-  with open(filename, 'wb') as f:
+def get(clientSocket, filenames):
+  clientSocket.send(pickle.dumps(RRQ(filenames[1])))
+  with open(filenames[2], 'a') as f:
     while True:
-      chunk = clientSocket.recv(sockBuffer)
-      f.write(chunk)
+      chunk = pickle.loads(clientSocket.recv(sockBuffer))
+      f.write(chunk.getData())
       clientSocket.send(pickle.dumps(ACK(chunk.getBlock())))
-      print("Writing...!")
-      if chunk.getSize() == 0:
+      if chunk.getSize() < 512:
         break
   f.close()
 
@@ -61,7 +60,7 @@ def main():
         case "dir":
           dir(clientSocket)
         case "get":
-          get(clientSocket, sentence[1])
+          get(clientSocket, sentence)
         case "end":
           clientSocket.close()            # close TCP connection
           print("Connection close, client ended")
